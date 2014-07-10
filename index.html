@@ -1,0 +1,223 @@
+<html>
+<head>
+  <link rel="stylesheet" href="http://cartodb-libs.global.ssl.fastly.net/cartodb.js/v3/themes/css/cartodb.css" />
+  <script src="http://libs.cartocdn.com/cartodb.js/v3/cartodb.js"></script>
+  <!--[if lte IE 8]>
+    <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/themes/css/cartodb.ie.css" />
+  <![endif]-->
+  <style>
+    html, body {width:100%; height:100%; padding: 0; margin: 0;font-family: Helvetica, sans-serif;}
+    #map { width: 100%; height:100%; background: black;}
+    #menu { position: absolute; top: 5px; right: 10px; width: 400px; height:60px; background: transparent; z-index:10;}
+    #menu a { 
+      margin: 15px 10px 0 0;
+      float: right;
+      vertical-align: baseline;
+      width: 70px;
+      padding: 10px;
+      text-align: center;
+      font: bold 11px "Helvetica",Arial;
+      line-height: normal;
+      color: #555;
+      border-radius: 4px;
+      border: 1px solid #777777;
+      background: #ffffff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    #menu a.selected,
+    #menu a:hover {
+      color: #F84F40;
+    }
+    #mode-change{
+      text-align: right;
+      color: #fff;
+    }
+	div.cartodb-infobox {
+		display: none;
+		top: 175px !important;
+    font: 13px "Helvetica";
+	}
+  </style>
+
+  <script>
+  var map;
+  var active_filter = 'crime';
+  var mode = 'total';
+  function init(){
+
+    $('#mode-change input').on('change', function(){
+      var radio_btn_value = $(this).val();
+
+      // If the mode you clicked on is not the current mode, then make it the current mode and referesh the map
+      if (mode != radio_btn_value) {
+        mode = radio_btn_value;
+        console.log(active_filter, mode)
+        LayerActions[active_filter][mode]();
+      }
+    });
+
+    // initiate leaflet map
+    map = new L.Map('map', { 
+      center: [40.72724908299899, -73.69955062866211],
+      zoom: 11,
+    });
+        // Disable scroll on mouseWheel or two-finger trackpad scroll
+        map.scrollWheelZoom.disable();
+
+    L.tileLayer('https://dnv9my2eseobd.cloudfront.net/v3/cartodb.map-4xtxp73f/{z}/{x}/{y}.png', {
+      attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>'
+    }).addTo(map);
+
+  var layerUrl = 'http://leekristena.cartodb.com/api/v2/viz/da26a0e0-ec3d-11e3-a5fc-0e10bcd91c2b/viz.json';
+
+  var sublayers = [];
+
+  cartodb.createLayer(map, layerUrl)
+    .addTo(map)
+    .on('done', function(layer) {
+      // change the query for the first layer
+      var subLayerOptions = {
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#960916;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#eb1024;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ crime_total <= 1810] {   marker-width: 40.6;}#mtacartodb_1 [ crime_total <= 1660] {   marker-width: 38.9;}#mtacartodb_1 [ crime_total <= 1570] {   marker-width: 37.9;}#mtacartodb_1 [ crime_total <= 940] {   marker-width: 29.3;}#mtacartodb_1 [ crime_total <= 850] {   marker-width: 27.9;}#mtacartodb_1 [ crime_total <= 700] {   marker-width: 25.3;}#mtacartodb_1 [ crime_total <= 580] {   marker-width: 23.0;}#mtacartodb_1 [ crime_total <= 550] {   marker-width: 22.4;}#mtacartodb_1 [ crime_total <= 520] {   marker-width: 21.8;}#mtacartodb_1 [ crime_total <= 490] {   marker-width: 21.1;}#mtacartodb_1 [ crime_total <= 460] {   marker-width: 20.5;}#mtacartodb_1 [ crime_total <= 430] {   marker-width: 19.8;}#mtacartodb_1 [ crime_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ crime_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ crime_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ crime_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ crime_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ crime_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ crime_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ crime_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ crime_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ crime_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ crime_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ crime_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ crime_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ crime_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ crime_total <= 5] {   marker-width: 2.1;}"
+      }
+
+      var sublayer = layer.getSubLayer(0);
+
+      sublayer.set(subLayerOptions);
+
+      sublayers.push(sublayer);
+	  
+	  var infobox = new cdb.geo.ui.InfoBox({
+            width: 255,
+			position: 'top|right',
+            layer: sublayer,
+            template: '<p><div style="text-align:center" font size="1"><strong>{{mta_station_name}}</strong></div></p>' + '<br>' + '<p><div style= "text-align:center"><strong>{{ridership_average}}</strong> average annual riders</div></p></li>' + '<br>' + '<li><p><strong> {{crime_total}} total crimes</strong> ({{crime_rate}} per 100,000 trips)</p></li>' + 
+					  '<li><p><strong> {{sex_total}} misdemeanor sex crimes</strong> ({{sex_rate}} per 100,000 trips)</p></li>' + '<li><p><strong>{{violent_total}} violent crimes</strong> ({{violent_rate}} per 100,000 trips)</p></li>' + '<li><p><strong> {{propery_total}} property crimes</strong> ({{property_rate}} per 100,000 trips)</p></li>' + '<li><p><strong> {{drug_total}} drug crimes</strong> ({{drug_rate}} per 100,000 trips)</p></li>' + '<li><p><strong> {{weapons_total}} weapon possession charges</strong> ({{weapons_rate}} per 100,000 trips)</p></div></li>' + '<br>' + '<p><em><center>"One in a million" = 0.01</em></center></p>'
+          });
+          
+          $("body").append(infobox.render().el);
+    }).on('error', function() {
+      //log the error
+    });
+
+
+    $('.button').click(function() {
+      $('.button').removeClass('selected');
+      $(this).addClass('selected');
+      console.log($(this).attr('id'), mode);
+      active_filter = $(this).attr('id');
+      // I added this `[mode]` bit here, so that once it finds the right function group, it will pick the correct function to execute for that mode
+      LayerActions[active_filter][mode]();
+    });
+
+  // Each one of these keys under LayerActions should have two keys, a `rate` and a `total` which are then the associated function
+  // That way you can specify the mode you're in through another variable and depending that global state, it will pick the right function
+  var LayerActions = {
+    crime: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#960916;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#eb1024;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ crime_total <= 1810] {   marker-width: 40.6;}#mtacartodb_1 [ crime_total <= 1660] {   marker-width: 38.9;}#mtacartodb_1 [ crime_total <= 1570] {   marker-width: 37.9;}#mtacartodb_1 [ crime_total <= 940] {   marker-width: 29.3;}#mtacartodb_1 [ crime_total <= 850] {   marker-width: 27.9;}#mtacartodb_1 [ crime_total <= 700] {   marker-width: 25.3;}#mtacartodb_1 [ crime_total <= 580] {   marker-width: 23.0;}#mtacartodb_1 [ crime_total <= 550] {   marker-width: 22.4;}#mtacartodb_1 [ crime_total <= 520] {   marker-width: 21.8;}#mtacartodb_1 [ crime_total <= 490] {   marker-width: 21.1;}#mtacartodb_1 [ crime_total <= 460] {   marker-width: 20.5;}#mtacartodb_1 [ crime_total <= 430] {   marker-width: 19.8;}#mtacartodb_1 [ crime_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ crime_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ crime_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ crime_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ crime_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ crime_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ crime_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ crime_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ crime_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ crime_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ crime_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ crime_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ crime_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ crime_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ crime_total <= 5] {   marker-width: 2.1;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#960916;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#eb1024;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ crime_rate <= 27.4] {   marker-width: 50;}#mtacartodb_1 [ crime_rate <= 9.1] {   marker-width: 28.8;}#mtacartodb_1 [ crime_rate <= 5.8] {   marker-width: 23;}#mtacartodb_1 [ crime_rate <= 4.3] {   marker-width: 19.8;}#mtacartodb_1 [ crime_rate <= 3.95] {   marker-width: 19;}#mtacartodb_1 [ crime_rate <= 3.55] {   marker-width: 18.1;}#mtacartodb_1 [ crime_rate <= 3.15] {   marker-width: 17.1;}#mtacartodb_1 [ crime_rate <= 2.8] {   marker-width: 16;}#mtacartodb_1 [ crime_rate <= 2.45] {   marker-width: 15;}#mtacartodb_1 [ crime_rate <= 2.15] {   marker-width: 14;}#mtacartodb_1 [ crime_rate <= 1.85] {   marker-width: 13;}#mtacartodb_1 [ crime_rate <= 1.6] {   marker-width: 12.1;}#mtacartodb_1 [ crime_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ crime_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ crime_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ crime_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ crime_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ crime_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ crime_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ crime_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ crime_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ crime_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ crime_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ crime_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ crime_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ crime_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+     weapons: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#007e80;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#009ea1;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ weapons_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ weapons_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ weapons_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ weapons_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ weapons_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ weapons_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ weapons_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ weapons_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ weapons_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ weapons_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ weapons_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ weapons_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ weapons_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ weapons_total <= 0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#007e80;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#009ea1;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ weapons_rate <= 3.95] {   marker-width: 19;}#mtacartodb_1 [ weapons_rate <= 3.55] {   marker-width: 18.1;}#mtacartodb_1 [ weapons_rate <= 3.15] {   marker-width: 17.1;}#mtacartodb_1 [ weapons_rate <= 2.8] {   marker-width: 16;}#mtacartodb_1 [ weapons_rate <= 2.45] {   marker-width: 15;}#mtacartodb_1 [ weapons_rate <= 2.15] {   marker-width: 14;}#mtacartodb_1 [ weapons_rate <= 1.85] {   marker-width: 13;}#mtacartodb_1 [ weapons_rate <= 1.6] {   marker-width: 12.1;}#mtacartodb_1 [ weapons_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ weapons_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ weapons_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ weapons_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ weapons_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ weapons_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ weapons_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ weapons_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ weapons_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ weapons_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ weapons_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ weapons_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ weapons_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ weapons_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+     sex: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#0063CC;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#007cff;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ sex_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ sex_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ sex_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ sex_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ sex_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ sex_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ sex_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ sex_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ sex_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ sex_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ sex_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ sex_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ sex_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ sex_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ sex_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ sex_total <= 0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#0063CC;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#007cff;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ sex_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ sex_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ sex_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ sex_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ sex_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ sex_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ sex_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ sex_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ sex_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ sex_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ sex_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ sex_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ sex_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+     drug: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#9A8900;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#d8c000;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ drug_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ drug_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ drug_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ drug_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ drug_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ drug_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ drug_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ drug_total <= 0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#9A8900;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#d8c000;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ drug_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ drug_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ drug_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ drug_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ drug_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ drug_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ drug_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ drug_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ drug_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ drug_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ drug_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ drug_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ drug_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ drug_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+     violent: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#AB4500;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#ef6100;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ violent_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ violent_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ violent_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ violent_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ violent_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ violent_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ violent_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ violent_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ violent_total <= 0.0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#AB4500;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#ef6100;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ violent_rate <= 3.55] {   marker-width: 18.1;}#mtacartodb_1 [ violent_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ violent_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ violent_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ violent_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ violent_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ violent_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ violent_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ violent_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ violent_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ violent_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ violent_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+     property: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:1;marker-line-color:#619500;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#78b900;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ propery_total <= 940] {   marker-width: 29.3;}#mtacartodb_1 [ propery_total <= 850] {   marker-width: 27.9;}#mtacartodb_1 [ propery_total <= 700] {   marker-width: 25.3;}#mtacartodb_1 [ propery_total <= 580] {   marker-width: 23.0;}#mtacartodb_1 [ propery_total <= 550] {   marker-width: 22.4;}#mtacartodb_1 [ propery_total <= 520] {   marker-width: 21.8;}#mtacartodb_1 [ propery_total <= 490] {   marker-width: 21.1;}#mtacartodb_1 [ propery_total <= 460] {   marker-width: 20.5;}#mtacartodb_1 [ propery_total <= 430] {   marker-width: 19.8;}#mtacartodb_1 [ propery_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ propery_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ propery_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ propery_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ propery_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ propery_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ propery_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ propery_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ propery_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ propery_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ propery_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ propery_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ propery_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ propery_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ propery_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ propery_total <= 0.0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#619500;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#78b900;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ property_rate <= 9.1] {   marker-width: 28.8;}#mtacartodb_1 [ property_rate <= 2.8] {   marker-width: 16;}#mtacartodb_1 [ property_rate <= 2.45] {   marker-width: 15;}#mtacartodb_1 [ property_rate <= 2.15] {   marker-width: 14;}#mtacartodb_1 [ property_rate <= 1.85] {   marker-width: 13;}#mtacartodb_1 [ property_rate <= 1.6] {   marker-width: 12.1;}#mtacartodb_1 [ property_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ property_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ property_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ property_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ property_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ property_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ property_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ property_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ property_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ property_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ property_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ property_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ property_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ property_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    }
+  }
+
+
+  }
+  </script>
+</head>
+
+<body onload="init()">
+  <div id='map'></div>
+  <div id='menu'>
+    <div id="mode-change">
+      <label><input type="radio" name="mode"  value="total" checked/> <strong>Total incidents</strong></label>
+      <label><input type="radio" name="mode" value="rate"/><strong>Rate per 100,000 trips</strong></label>
+    </div>
+    <a href="#violent" id="violent" class="button violent">VIOLENT CRIME</a>
+    <a href="#sex" id="sex" class="button sex">MISD. SEX CRIMES</a>
+    <a href="#crime" id="crime" class="button crimet selected">ALL<br> CRIME</a>
+    <a href="#weapons" id="weapons" class="button weapons">WEAPON POSSESSION</a>
+    <a href="#drug" id="drug" class="button drug">DRUG CRIMES</a>
+    <a href="#property" id="property" class="button property">PROPERTY CRIMES</a>
+  </div>
+</body>
+</html>
