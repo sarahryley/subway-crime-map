@@ -1,0 +1,247 @@
+<html>
+<head>
+  <link rel="stylesheet" href="http://cartodb-libs.global.ssl.fastly.net/cartodb.js/v3/themes/css/cartodb.css" />
+  <script src="http://libs.cartocdn.com/cartodb.js/v3/cartodb.js"></script>
+  <!--[if lte IE 8]>
+    <link rel="stylesheet" href="http://libs.cartocdn.com/cartodb.js/v3/themes/css/cartodb.ie.css" />
+  <![endif]-->
+<style>
+    html, body{width:100%; height:100%; padding: 0; margin: 0;font-family: Helvetica, sans-serif;}
+    #map {width: 100%; height:100%; background: black;}
+
+    #menu-crimes{position:absolute;top:0px;right:0px;width:140px;z-index:10;background:url("http://multimedia.nydailynews.com/css/subway-crimes/i/icon-crimes-3.png") 10px 50% no-repeat rgba(57,57,57,.9);-moz-border-radius-bottomleft: 5px;-webkit-border-bottom-left-radius: 5px;border-bottom-left-radius: 5px;}
+        #menu-crimes a{display:block;text-decoration:none;height:60px;border-top:1px dotted #515151;font:bold 12px/14px "Arial";text-transform:uppercase;color:#aaa;padding-left:52px;border-right:6px solid transparent;}
+        #menu-crimes a:first-child{border-top:0;}
+        #menu-crimes a.selected{outline:none;background:rgba(102,102,102,.2);}
+        #menu-crimes a.crimet:hover, #menu-crimes a.selected.crimet{color:#d51529;border-right-color:#d51529;}
+        #menu-crimes a.sex:hover, #menu-crimes a.selected.sex{color:#2f71c0;border-right-color:#2f71c0;}
+        #menu-crimes a.violent:hover, #menu-crimes a.selected.violent{color:#cc6412;border-right-color:#cc6412;}
+        #menu-crimes a.property:hover, #menu-crimes a.selected.property{color:#459b41;border-right-color:#459b41;}
+        #menu-crimes a.drug:hover, #menu-crimes a.selected.drug{color:#9ba315;border-right-color:#9ba315;}       
+        #menu-crimes a.weapons:hover, #menu-crimes a.selected.weapons{color:#039496;border-right-color:#039496;}
+            #menu-crimes a span{display:table;height:100%;}
+                #menu-crimes a b{display:table-cell;vertical-align:middle;}
+    
+    #mode-change{position:absolute;top:0;left:50px;height:24px;background:rgba(101,101,101,.9);color:#e1e1e1;font:11px/24px "Arial";vertical-align:middle;padding:0 10px;-moz-border-radius-bottomright: 5px; -webkit-border-bottom-right-radius: 5px; border-bottom-right-radius: 5px; -moz-border-radius-bottomleft: 5px; -webkit-border-bottom-left-radius: 5px; border-bottom-left-radius: 5px;}
+    #mode-change:before{content:"View By";text-transform:uppercase;font-weight:bold;color:#fff;}
+        #mode-change label strong:hover{cursor:pointer;color:#fff;}
+	
+    div.cartodb-infobox{display:none;position:absolute;top:auto !important;bottom:30px;right:0 !important;font:13px/20px "Arial";color:#111;padding:10px 0;background:rgba(255,255,255,.9);-webkit-border-radius:0px; -moz-border-radius:0px; border-radius:0px; -moz-border-radius-topleft: 5px; -webkit-border-top-left-radius: 5px; border-top-left-radius: 5px; -moz-border-radius-bottomleft: 5px; -webkit-border-bottom-left-radius: 5px; border-bottom-left-radius: 5px; }         
+    div.cartodb-infobox div{text-align:left !important;}
+        div.cartodb-infobox div{padding:0 10px 10px;margin-bottom:10px;border-bottom:1px dotted #c2c2c2;}
+        div.cartodb-infobox P:first-child + div{padding-bottom:0;margin-bottom:0;border-bottom:0;}
+            div.cartodb-infobox P:first-child + div strong{font-size:16px; color:#e8172d;}
+        div.cartodb-infobox li{list-style:none;}
+        div.cartodb-infobox li p{margin:0;}
+        div.cartodb-infobox li{border-left:7px solid #d51529;padding:0 10px 0 10px;}/*RED*/
+        div.cartodb-infobox br + li{border-left-color:#d51529;}/*RED*/
+        div.cartodb-infobox br + li + li{border-left-color:#2f71c0;}/*BLUE*/
+        div.cartodb-infobox br + li + li + li{border-left-color:#cc6412;}/*ORANGE*/
+        div.cartodb-infobox br + li + li + li + li{border-left-color:#459b41;}/*GREEN*/
+        div.cartodb-infobox br + li + li + li + li + li{border-left-color:#9ba315;}/*YELLOW*/
+        div.cartodb-infobox br + li + li + li + li + li + li{border-left-color:#039496;}/*TURUOISE*/
+        div.cartodb-infobox br + li + li + li + li + li + li + li{border-left-color:transparent;color:#666;font-size:11px;padding:10px 0 0;}/*WHITE*/
+	
+/* iPads */
+@media only screen 
+and (min-device-width : 768px) 
+and (max-device-width : 1024px) 
+and (orientation : portrait) {
+    div.cartodb-infobox{display:block !important;}
+}
+
+div.cartodb-tooltip-content-wrapper{background:rgba(255,255,255,.9);padding:5px;-webkit-border-radius:5px;-moz-border-radius:5px; border-radius:5px;}
+    div.cartodb-tooltip-content{padding:5px !important;}
+        div.cartodb-tooltip-content *{width:auto !important;}
+    div.cartodb-tooltip{min-width:0px !important;}
+
+.cartodb-legend-stack, div.cartodb-infobox em, div.cartodb-infobox br, div.cartodb-infobox em + div, div.leaflet-bottom.leaflet-right, div.cartodb-infobox p:empty, div.cartodb-infobox div:empty{display:none !important;}
+</style>
+
+  <script>
+  var map;
+  var active_filter = 'crime';
+  var mode = 'total';
+  function init(){
+    $('#mode-change input').on('change', function(){
+      var radio_btn_value = $(this).val();
+
+      // If the mode you clicked on is not the current mode, then make it the current mode and referesh the map
+      if (mode != radio_btn_value) {
+        mode = radio_btn_value;
+        console.log(active_filter, mode)
+        LayerActions[active_filter][mode]();
+      }
+    });
+
+    // initiate leaflet map
+    map = new L.Map('map', { 
+      center: [40.7949672,-73.9171682],
+      zoom: 12,
+      bounds: [[40.48902144841167,-74.61896896362305],[40.96462696233803,-72.78013229370117]]
+    });
+        // Disable scroll on mouseWheel or two-finger trackpad scroll
+        map.scrollWheelZoom.disable();
+
+    L.tileLayer('https://dnv9my2eseobd.cloudfront.net/v3/cartodb.map-4xtxp73f/{z}/{x}/{y}.png', {
+      attribution: 'Mapbox <a href="http://mapbox.com/about/maps" target="_blank">Terms &amp; Feedback</a>'
+    }).addTo(map);
+
+  var layerUrl = 'http://leekristena.cartodb.com/api/v2/viz/da26a0e0-ec3d-11e3-a5fc-0e10bcd91c2b/viz.json';
+
+  var sublayers = [];
+
+  cartodb.createLayer(map, layerUrl)
+    .addTo(map)
+    .on('done', function(layer) {
+      // change the query for the first layer
+      var subLayerOptions = {
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#a81823;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#a81823;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ crime_total <= 1810] {   marker-width: 40.6;}#mtacartodb_1 [ crime_total <= 1660] {   marker-width: 38.9;}#mtacartodb_1 [ crime_total <= 1570] {   marker-width: 37.9;}#mtacartodb_1 [ crime_total <= 940] {   marker-width: 29.3;}#mtacartodb_1 [ crime_total <= 850] {   marker-width: 27.9;}#mtacartodb_1 [ crime_total <= 700] {   marker-width: 25.3;}#mtacartodb_1 [ crime_total <= 580] {   marker-width: 23.0;}#mtacartodb_1 [ crime_total <= 550] {   marker-width: 22.4;}#mtacartodb_1 [ crime_total <= 520] {   marker-width: 21.8;}#mtacartodb_1 [ crime_total <= 490] {   marker-width: 21.1;}#mtacartodb_1 [ crime_total <= 460] {   marker-width: 20.5;}#mtacartodb_1 [ crime_total <= 430] {   marker-width: 19.8;}#mtacartodb_1 [ crime_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ crime_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ crime_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ crime_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ crime_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ crime_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ crime_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ crime_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ crime_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ crime_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ crime_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ crime_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ crime_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ crime_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ crime_total <= 5] {   marker-width: 2.1;}"
+      }
+
+      var sublayer = layer.getSubLayer(0);
+
+      sublayer.set(subLayerOptions);
+
+      sublayers.push(sublayer);
+	  
+	  var infobox = new cdb.geo.ui.InfoBox({
+            width: 255,
+			position: 'top|right',
+            layer: sublayer,
+            template: '<p><div><strong>{{mta_station_name}}</strong></div></p><p><div><strong>{{ridership_average}}</strong> average annual riders</div></p></li>' + '<br>' + '<li><p><strong> {{crime_total}} total crimes</strong> ({{crime_rate}} per 100,000 trips)</p></li>' + 
+					  '<li><p><strong> {{sex_total}} misdemeanor sex crimes</strong> ({{sex_rate}} per 100,000 trips)</p></li>' + '<li><p><strong>{{violent_total}} violent crimes</strong> ({{violent_rate}} per 100,000 trips)</p></li>' + '<li><p><strong> {{propery_total}} property crimes</strong> ({{property_rate}} per 100,000 trips)</p></li>' + '<li><p><strong> {{drug_total}} drug crimes</strong> ({{drug_rate}} per 100,000 trips)</p></li>' + '<li><p><strong> {{weapons_total}} weapon possession charges</strong> ({{weapons_rate}} per 100,000 trips)</p></div></li><li>"One in a million" = 0.01</li>'
+          });
+          
+          $("body").append(infobox.render().el);
+    }).on('error', function() {
+      //log the error
+    });
+
+
+    $('.button').click(function() {
+      $('.button').removeClass('selected');
+      $(this).addClass('selected');
+      console.log($(this).attr('id'), mode);
+      active_filter = $(this).attr('id');
+      // I added this `[mode]` bit here, so that once it finds the right function group, it will pick the correct function to execute for that mode
+      LayerActions[active_filter][mode]();
+    });
+
+  // Each one of these keys under LayerActions should have two keys, a `rate` and a `total` which are then the associated function
+  // That way you can specify the mode you're in through another variable and depending that global state, it will pick the right function
+  var LayerActions = {
+    //ALL CRIMES
+    crime: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#a81823;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#a81823;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ crime_total <= 1810] {   marker-width: 40.6;}#mtacartodb_1 [ crime_total <= 1660] {   marker-width: 38.9;}#mtacartodb_1 [ crime_total <= 1570] {   marker-width: 37.9;}#mtacartodb_1 [ crime_total <= 940] {   marker-width: 29.3;}#mtacartodb_1 [ crime_total <= 850] {   marker-width: 27.9;}#mtacartodb_1 [ crime_total <= 700] {   marker-width: 25.3;}#mtacartodb_1 [ crime_total <= 580] {   marker-width: 23.0;}#mtacartodb_1 [ crime_total <= 550] {   marker-width: 22.4;}#mtacartodb_1 [ crime_total <= 520] {   marker-width: 21.8;}#mtacartodb_1 [ crime_total <= 490] {   marker-width: 21.1;}#mtacartodb_1 [ crime_total <= 460] {   marker-width: 20.5;}#mtacartodb_1 [ crime_total <= 430] {   marker-width: 19.8;}#mtacartodb_1 [ crime_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ crime_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ crime_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ crime_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ crime_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ crime_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ crime_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ crime_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ crime_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ crime_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ crime_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ crime_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ crime_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ crime_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ crime_total <= 5] {   marker-width: 2.1;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#a81823;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#a81823;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ crime_rate <= 27.4] {   marker-width: 50;}#mtacartodb_1 [ crime_rate <= 9.1] {   marker-width: 28.8;}#mtacartodb_1 [ crime_rate <= 5.8] {   marker-width: 23;}#mtacartodb_1 [ crime_rate <= 4.3] {   marker-width: 19.8;}#mtacartodb_1 [ crime_rate <= 3.95] {   marker-width: 19;}#mtacartodb_1 [ crime_rate <= 3.55] {   marker-width: 18.1;}#mtacartodb_1 [ crime_rate <= 3.15] {   marker-width: 17.1;}#mtacartodb_1 [ crime_rate <= 2.8] {   marker-width: 16;}#mtacartodb_1 [ crime_rate <= 2.45] {   marker-width: 15;}#mtacartodb_1 [ crime_rate <= 2.15] {   marker-width: 14;}#mtacartodb_1 [ crime_rate <= 1.85] {   marker-width: 13;}#mtacartodb_1 [ crime_rate <= 1.6] {   marker-width: 12.1;}#mtacartodb_1 [ crime_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ crime_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ crime_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ crime_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ crime_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ crime_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ crime_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ crime_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ crime_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ crime_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ crime_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ crime_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ crime_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ crime_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+    //SEX
+    sex: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#3c6cad;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#3c6cad;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ sex_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ sex_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ sex_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ sex_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ sex_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ sex_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ sex_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ sex_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ sex_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ sex_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ sex_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ sex_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ sex_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ sex_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ sex_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ sex_total <= 0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#3c6cad;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#3c6cad;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ sex_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ sex_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ sex_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ sex_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ sex_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ sex_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ sex_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ sex_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ sex_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ sex_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ sex_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ sex_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ sex_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+    //VIOLENT
+    violent: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#ae500c;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#ae500c;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ violent_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ violent_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ violent_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ violent_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ violent_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ violent_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ violent_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ violent_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ violent_total <= 0.0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#ae500c;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#ae500c;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ violent_rate <= 3.55] {   marker-width: 18.1;}#mtacartodb_1 [ violent_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ violent_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ violent_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ violent_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ violent_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ violent_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ violent_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ violent_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ violent_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ violent_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ violent_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+    //PROPERTY
+    property: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:1;marker-line-color:#3f933f;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#3f933f;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ propery_total <= 940] {   marker-width: 29.3;}#mtacartodb_1 [ propery_total <= 850] {   marker-width: 27.9;}#mtacartodb_1 [ propery_total <= 700] {   marker-width: 25.3;}#mtacartodb_1 [ propery_total <= 580] {   marker-width: 23.0;}#mtacartodb_1 [ propery_total <= 550] {   marker-width: 22.4;}#mtacartodb_1 [ propery_total <= 520] {   marker-width: 21.8;}#mtacartodb_1 [ propery_total <= 490] {   marker-width: 21.1;}#mtacartodb_1 [ propery_total <= 460] {   marker-width: 20.5;}#mtacartodb_1 [ propery_total <= 430] {   marker-width: 19.8;}#mtacartodb_1 [ propery_total <= 400] {   marker-width: 19.1;}#mtacartodb_1 [ propery_total <= 370] {   marker-width: 18.4;}#mtacartodb_1 [ propery_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ propery_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ propery_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ propery_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ propery_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ propery_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ propery_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ propery_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ propery_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ propery_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ propery_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ propery_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ propery_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ propery_total <= 0.0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#3f933f;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#3f933f;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ property_rate <= 9.1] {   marker-width: 28.8;}#mtacartodb_1 [ property_rate <= 2.8] {   marker-width: 16;}#mtacartodb_1 [ property_rate <= 2.45] {   marker-width: 15;}#mtacartodb_1 [ property_rate <= 2.15] {   marker-width: 14;}#mtacartodb_1 [ property_rate <= 1.85] {   marker-width: 13;}#mtacartodb_1 [ property_rate <= 1.6] {   marker-width: 12.1;}#mtacartodb_1 [ property_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ property_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ property_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ property_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ property_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ property_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ property_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ property_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ property_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ property_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ property_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ property_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ property_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ property_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+    //DRUGS
+    drug: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#979514;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#979514;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ drug_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ drug_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ drug_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ drug_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ drug_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ drug_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ drug_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ drug_total <= 0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#979514;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#979514;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ drug_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ drug_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ drug_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ drug_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ drug_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ drug_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ drug_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ drug_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ drug_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ drug_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ drug_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ drug_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ drug_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ drug_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    },
+    //WEAPONS
+    weapons: {
+      total: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#039496;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#039496;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ weapons_total <= 340] {   marker-width: 17.6;}#mtacartodb_1 [ weapons_total <= 310] {   marker-width: 16.8;}#mtacartodb_1 [ weapons_total <= 280] {   marker-width: 16.0;}#mtacartodb_1 [ weapons_total <= 250] {   marker-width: 15.1;}#mtacartodb_1 [ weapons_total <= 220] {   marker-width: 14.2;}#mtacartodb_1 [ weapons_total <= 190] {   marker-width: 13.2;}#mtacartodb_1 [ weapons_total <= 160] {   marker-width: 12.1;}#mtacartodb_1 [ weapons_total <= 130] {   marker-width: 10.9;}#mtacartodb_1 [ weapons_total <= 100] {   marker-width: 9.6;}#mtacartodb_1 [ weapons_total <= 70] {   marker-width: 8.0;}#mtacartodb_1 [ weapons_total <= 40] {   marker-width: 6.0;}#mtacartodb_1 [ weapons_total <= 10] {   marker-width: 3.0;}#mtacartodb_1 [ weapons_total <= 5] {   marker-width: 2.1;}#mtacartodb_1 [ weapons_total <= 0] {   marker-width: 0;}"});
+      return true;
+    },
+      rate: function(){
+        sublayers[0].set({
+        sql: "SELECT * FROM mtacartodb_1",
+        cartocss: "#mtacartodb_1{marker-fill-opacity:0.9;marker-line-color:#039496;marker-line-width:1;marker-line-opacity:1;marker-placement:point;marker-multi-policy:largest;marker-type:ellipse;marker-fill:#039496;marker-allow-overlap:true;marker-clip:false;}#mtacartodb_1 [ weapons_rate <= 3.95] {   marker-width: 19;}#mtacartodb_1 [ weapons_rate <= 3.55] {   marker-width: 18.1;}#mtacartodb_1 [ weapons_rate <= 3.15] {   marker-width: 17.1;}#mtacartodb_1 [ weapons_rate <= 2.8] {   marker-width: 16;}#mtacartodb_1 [ weapons_rate <= 2.45] {   marker-width: 15;}#mtacartodb_1 [ weapons_rate <= 2.15] {   marker-width: 14;}#mtacartodb_1 [ weapons_rate <= 1.85] {   marker-width: 13;}#mtacartodb_1 [ weapons_rate <= 1.6] {   marker-width: 12.1;}#mtacartodb_1 [ weapons_rate <= 1.4] {   marker-width: 11.3;}#mtacartodb_1 [ weapons_rate <= 1.15] {   marker-width: 10.2;}#mtacartodb_1 [ weapons_rate <= 0.95] {   marker-width: 9.3;}#mtacartodb_1 [ weapons_rate <= 0.8] {   marker-width: 8.5;}#mtacartodb_1 [ weapons_rate <= 0.65] {   marker-width: 7.7;}#mtacartodb_1 [ weapons_rate <= 0.5] {   marker-width: 6.8;}#mtacartodb_1 [ weapons_rate <= 0.4] {   marker-width: 6;}#mtacartodb_1 [ weapons_rate <= 0.35] {   marker-width: 5.7;}#mtacartodb_1 [ weapons_rate <= 0.25] {   marker-width: 4.8;}#mtacartodb_1 [ weapons_rate <= 0.15] {   marker-width: 3.7;}#mtacartodb_1 [ weapons_rate <= 0.1] {   marker-width: 3;}#mtacartodb_1 [ weapons_rate <= 0.05] {   marker-width: 2.1;}#mtacartodb_1 [ weapons_rate <= 0.01] {   marker-width: 1;}#mtacartodb_1 [ weapons_rate <= 0.0] {   marker-width: 0;}"});
+        return true;
+      }
+    }
+  }
+  }
+  </script>
+</head>
+
+<body onload="init()">
+    <div id='map'></div>
+    <div id='menu'>
+        <div id="mode-change">
+          <label><input type="radio" name="mode"  value="total" checked/> <strong>Total incidents</strong></label>
+          <label><input type="radio" name="mode" value="rate"/><strong>Rate per 100,000 trips</strong></label>
+        </div>
+        <div id="menu-crimes">
+            <a href="#crime" id="crime" class="button crimet selected"><span><b>ALL CRIME</b></span></a>
+            <a href="#sex" id="sex" class="button sex"><span><b>MISD. SEX CRIMES</b></span></a>
+            <a href="#violent" id="violent" class="button violent"><span><b>VIOLENT<BR> CRIME</b></span></a>
+            <a href="#property" id="property" class="button property"><span><b>PROPERTY CRIMES</b></span></a>
+            <a href="#drug" id="drug" class="button drug"><span><b>DRUG CRIMES</b></span></a>
+            <a href="#weapons" id="weapons" class="button weapons"><span><b>WEAPON POSSESSION</b></span></a>
+        </div>
+    </div>
+</body>
+</html>
